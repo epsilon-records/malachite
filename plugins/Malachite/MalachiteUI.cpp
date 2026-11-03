@@ -53,8 +53,8 @@ static constexpr float W = 1060.f, H = 720.f;
 
 static Color withAlpha(const Color& c, float a) { Color r(c); r.alpha = a; return r; }
 
-enum WType { Knob, Segment };
-struct Ctl { WType type; uint32_t param; float x, y, r; const char* label; bool sideLabel; };   // Segment: r = width
+enum WType { Knob, Segment, Spin };
+struct Ctl { WType type; uint32_t param; float x, y, r; const char* label; bool sideLabel; };   // Segment, Spin: x = centre, r = width
 
 // ---------------------------------------------------------------- layout
 static constexpr float SX = 16, SY = 64, SW = 1028, SH = 206;          // synth panel
@@ -65,18 +65,22 @@ static constexpr float GL = QX + 64, GR = QX + QW - 12, COLW = (GR - GL) / 16.f;
 static constexpr float ROLL_Y = QY + 114, ROW_H = 13.f, ROLL_H = 13 * ROW_H;
 static constexpr float OCT_Y = ROLL_Y + ROLL_H + 8, ACC_Y = OCT_Y + 24, SLD_Y = ACC_Y + 24, GATE_Y = SLD_Y + 24, LANE_H = 19, NUM_Y = GATE_Y + 34;
 static constexpr float TOOL_Y = QY + 72, TOOL_H = 24;
+static constexpr float KNOB_X0 = SX + 214, KNOB_DX = 84;                 // synth knobs; the 8th is the sub oscillator
 
 static std::vector<Ctl> buildControls() {
     std::vector<Ctl> c;
     c.push_back({ Segment, kWave, SX + 86, SY + 58, 132, "", false });
-    static const uint32_t kn[7] = { kTune, kCutoff, kResonance, kEnvMod, kDecay, kAccent, kVolume };
-    static const char* const lb[7] = { "TUNING", "CUTOFF", "RESONANCE", "ENV MOD", "DECAY", "ACCENT", "VOLUME" };
-    for (int i = 0; i < 7; ++i) c.push_back({ Knob, kn[i], SX + 222 + i * 92.f, SY + 96, i == 1 || i == 2 ? 36.f : 31.f, lb[i], false });
+    static const uint32_t kn[8] = { kTune, kCutoff, kResonance, kEnvMod, kDecay, kAccent, kVolume, kSubLevel };
+    static const char* const lb[8] = { "TUNING", "CUTOFF", "RESONANCE", "ENV MOD", "DECAY", "ACCENT", "VOLUME", "SUB" };
+    for (int i = 0; i < 8; ++i) c.push_back({ Knob, kn[i], KNOB_X0 + i * KNOB_DX, SY + 96, i == 1 || i == 2 ? 36.f : 31.f, lb[i], false });
+    c.push_back({ Segment, kSubOct, KNOB_X0 + 7 * KNOB_DX, SY + 36, 72, "", false });
     c.push_back({ Segment, kSeqMode, QX + 126, QY + 36, 210, "", false });
     c.push_back({ Knob, kTempo, QX + 268, QY + 36, 15, "FREE TEMPO", true });
     c.push_back({ Segment, kGroup, QX + 470, QY + 36, 156, "", false });
     c.push_back({ Segment, kPattern, QX + 708, QY + 36, 272, "", false });
     c.push_back({ Segment, kSection, QX + 940, QY + 36, 138, "", false });
+    c.push_back({ Spin, kScale, QX + 929, TOOL_Y + TOOL_H / 2, 88, "", false });
+    c.push_back({ Spin, kRoot, QX + 997, TOOL_Y + TOOL_H / 2, 38, "", false });
     return c;
 }
 static const std::vector<Ctl>& controls() { static std::vector<Ctl> c = buildControls(); return c; }
@@ -86,12 +90,18 @@ static const char* const* segLabels(uint32_t p, int& n) {
     static const char* const grp[] = { "I", "II", "III", "IV" };
     static const char* const pat[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
     static const char* const sec[] = { "A", "B", "A+B" };
+    static const char* const sub[] = { "-1", "-2" };
+    static const char* const scl[] = { "CHROMATIC", "MAJOR", "MINOR", "DORIAN", "PHRYGIAN", "HARM MIN", "MIN PENTA", "MAJ PENTA", "BLUES" };
+    static const char* const rt[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
     switch (p) {
     case kWave: n = 2; return wave;
     case kSeqMode: n = 3; return seq;
     case kGroup: n = 4; return grp;
     case kPattern: n = 8; return pat;
     case kSection: n = 3; return sec;
+    case kSubOct: n = 2; return sub;
+    case kScale: n = kNumScales; return scl;
+    case kRoot: n = 12; return rt;
     default: n = 0; return nullptr;
     }
 }
@@ -271,7 +281,7 @@ protected:
         for (int k = 0; k < 4; ++k) { beginPath(); ellipse(cx + 3, cy + 2, 13.5f - k * 3.2f, 10.5f - k * 2.6f); strokeColor(withAlpha(C_ACC, 0.55f + 0.1f * k)); strokeWidth(1.4f); stroke(); }
         fontSize(21); textLetterSpacing(4.5f); fillColor(C_TEXT); textAlign(ALIGN_LEFT | ALIGN_MIDDLE); text(60, 34, "MALACHITE", nullptr);
         fontSize(9.5f); textLetterSpacing(2.5f); fillColor(C_DIM); text(222, 29, "ACID BASS", nullptr);
-        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(222, 41, "EPSILON AUDIO 1.1", nullptr);
+        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(222, 41, "EPSILON AUDIO 1.2", nullptr);
         drawPresetBar();
         for (int k = 0; k < 2; ++k) {
             const float x = A_X + k * AB_W; const bool on = abSlot == k, hot = hoverHeader == 6 + k;
@@ -302,6 +312,8 @@ protected:
         }
         restore();
         caption(SX + 86, SY + 32, "WAVEFORM");
+        caption(KNOB_X0 + 7 * KNOB_DX, SY + 14, "SUB OCTAVE");
+        beginPath(); moveTo(KNOB_X0 + 6.5f * KNOB_DX, SY + 22); lineTo(KNOB_X0 + 6.5f * KNOB_DX, SY + 166); strokeColor(C_LINE); strokeWidth(1); stroke();
         // LEDs
         const bool g = gateLit, a = accentLit;
         auto led = [&](float x, float y, bool on, const Color& c, const char* label) {
@@ -335,6 +347,7 @@ protected:
         const Pattern& pt = editPat();
         caption(QX + 14, TOOL_Y + TOOL_H / 2, "EDIT", ALIGN_LEFT); caption(QX + 136, TOOL_Y + TOOL_H / 2, "LENGTH", ALIGN_LEFT);
         caption(QX + 444, TOOL_Y + TOOL_H / 2, "SHIFT", ALIGN_LEFT); caption(QX + 556, TOOL_Y + TOOL_H / 2, "TRANSPOSE", ALIGN_LEFT);
+        caption(QX + 850, TOOL_Y + TOOL_H / 2, "SCALE", ALIGN_LEFT);
         const bool secFixed = (int)(val[kSection] + .5f) != kSecAB;
         for (int t = 0; t < kNumTools; ++t) {
             const ToolRect& r = kTools[t]; const bool hot = hoverTool == t;
@@ -355,7 +368,7 @@ protected:
         }
         { char b[64]; static const char* const g[] = { "I", "II", "III", "IV" };
           snprintf(b, sizeof b, "EDITING  %s-%d %s  ·  %d STEP%s", g[(int)(val[kGroup] + .5f)], (int)(val[kPattern] + .5f) + 1, editHalf() ? "B" : "A", pt.len, pt.len == 1 ? "" : "S");
-          fontSize(8.5f); textLetterSpacing(1.6f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(C_DIM); text(QX + QW - 14, TOOL_Y + TOOL_H / 2, b, nullptr); }
+          fontSize(8.5f); textLetterSpacing(1.6f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(C_DIM); text(GR, ROLL_Y - 9, b, nullptr); }
         drawGrid();
     }
     float colX(int i) const { return GL + i * COLW; }
@@ -364,10 +377,12 @@ protected:
         const bool playingHere = playPat == editIndex() && playStep >= 0;
         // roll background: black-key rows darker
         static const bool blackKey[13] = { false, true, false, true, false, false, true, false, true, false, true, false, false };
+        const int sc = (int)(val[kScale] + .5f), rt = (int)(val[kRoot] + .5f);
         for (int r = 0; r < 13; ++r) {
-            const int note = 12 - r; const float y = ROLL_Y + r * ROW_H;
-            beginPath(); rect(GL, y, GR - GL, ROW_H); fillColor(blackKey[note] ? C_DISPLAY : Color(0x10, 0x18, 0x14)); fill();
-            fontSize(7.5f); textLetterSpacing(0.6f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(blackKey[note] ? C_FAINT : C_DIM);
+            const int note = 12 - r; const float y = ROLL_Y + r * ROW_H; const bool in = inScale(note, rt, sc);
+            beginPath(); rect(GL, y, GR - GL, ROW_H); fillColor(!in ? Color(0x06, 0x09, 0x08) : (blackKey[note] ? C_DISPLAY : Color(0x10, 0x18, 0x14))); fill();
+            if (in && sc != kChromatic && note % 12 == rt) { beginPath(); rect(GL, y, 3, ROW_H); fillColor(withAlpha(C_ACC, 0.6f)); fill(); }   // the root
+            fontSize(7.5f); textLetterSpacing(0.6f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(!in ? withAlpha(C_FAINT, 0.5f) : (blackKey[note] ? C_FAINT : C_DIM));
             text(GL - 8, y + ROW_H / 2 + 0.5f, noteName(note), nullptr);
         }
         caption(GL - 8, OCT_Y + LANE_H / 2, "OCT", ALIGN_RIGHT); caption(GL - 8, ACC_Y + LANE_H / 2, "ACCENT", ALIGN_RIGHT);
@@ -394,7 +409,8 @@ protected:
                 const float y = rowY(note);
                 const Color c = s.accent && !tie ? C_COPPER : C_ACC;
                 beginPath(); roundedRect(x + (tie ? 0.f : 3.f), y + 1.5f, COLW - (tie ? 3.f : 6.f), ROW_H - 3, 3);
-                fillColor(withAlpha(c, a * (tie ? 0.55f : 0.95f))); fill();
+                if (inScale(note, rt, sc)) { fillColor(withAlpha(c, a * (tie ? 0.55f : 0.95f))); fill(); }
+                else { strokeColor(withAlpha(c, a * 0.9f)); strokeWidth(1.5f); stroke(); }   // out of the scale: plays the scale note below
                 if (oc != 0) {
                     const float ax = x + COLW - 12, ay = y + ROW_H / 2;
                     beginPath(); if (oc > 0) { moveTo(ax - 3.5f, ay + 2.5f); lineTo(ax + 3.5f, ay + 2.5f); lineTo(ax, ay - 3); } else { moveTo(ax - 3.5f, ay - 2.5f); lineTo(ax + 3.5f, ay - 2.5f); lineTo(ax, ay + 3); }
@@ -452,6 +468,16 @@ protected:
                 fontSize(8.5f); textLetterSpacing(1.6f); textAlign(ALIGN_CENTER | ALIGN_TOP); fillColor(C_DIM); text(c.x, c.y + c.r + 7, c.label, nullptr);
                 fontSize(11); textLetterSpacing(0.4f); fillColor(hot ? C_ACC : C_TEXT); text(c.x, c.y + c.r + 20, buf, nullptr);
             }
+        } else if (c.type == Spin) {
+            int n = 0; const char* const* names = segLabels(p, n);
+            const int cur = std::max(0, std::min(n - 1, (int)(val[p] + .5f))); const float x0 = c.x - c.r / 2, h = TOOL_H;
+            const bool on = p == kScale ? cur != kChromatic : (int)(val[kScale] + .5f) != kChromatic;
+            beginPath(); roundedRect(x0, c.y - h / 2, c.r, h, 4); fillColor(C_DISPLAY); fill(); strokeColor(hot ? C_DIM : C_LINE); strokeWidth(1); stroke();
+            for (int side = 0; side < 2; ++side) {
+                const float ax = side == 0 ? x0 + 7 : x0 + c.r - 7, d = side == 0 ? -1.f : 1.f;
+                beginPath(); moveTo(ax - 2 * d, c.y - 3.5f); lineTo(ax + 2 * d, c.y); lineTo(ax - 2 * d, c.y + 3.5f); closePath(); fillColor(hot ? C_ACC : C_FAINT); fill();
+            }
+            fontSize(8.5f); textLetterSpacing(1.f); textAlign(ALIGN_CENTER | ALIGN_MIDDLE); fillColor(on ? C_ACC : C_DIM); text(c.x, c.y + 0.5f, names[cur], nullptr);
         } else {
             int n = 0; const char* const* names = segLabels(p, n);
             const int cur = (int)(val[p] + .5f); const float sw = c.r / n, x0 = c.x - c.r / 2;
@@ -673,12 +699,18 @@ protected:
         }
         pushPatterns(); endGesture();
     }
+    // wraps around: the scale and root selectors cycle
+    void spinBy(uint32_t p, int d) { int n = 0; segLabels(p, n); if (n < 1) return; const int cur = (int)(val[p] + .5f); beginGesture(); commit(p, (float)(((cur + d) % n + n) % n)); endGesture(); }
     void randomize(Pattern& pt) {
-        static const int scale[] = { 0, 2, 3, 5, 7, 8, 10, 12 };
+        // notes from the chosen scale, or C minor when the scale is CHROMATIC; the root comes up most often
+        const int sc = (int)(val[kScale] + .5f), rt = (int)(val[kRoot] + .5f);
+        int pool[13], np = 0, home = 0;
+        if (sc == kChromatic) { static const int cm[] = { 0, 2, 3, 5, 7, 8, 10, 12 }; for (int v : cm) pool[np++] = v; }
+        else { for (int v = 0; v <= 12; ++v) if (inScale(v, rt, sc)) pool[np++] = v; home = rt; }
         std::uniform_real_distribution<float> u(0.f, 1.f);
         for (int i = 0; i < 16; ++i) {
             Step& s = pt.s[i];
-            s.note = (int8_t)scale[(int)(u(rng) * 8) % 8]; if (u(rng) < 0.35f) s.note = 0;
+            s.note = (int8_t)pool[(int)(u(rng) * np) % np]; if (u(rng) < 0.35f) s.note = (int8_t)home;
             const float o = u(rng); s.oct = (int8_t)(o < 0.18f ? 1 : (o < 0.26f ? -1 : 0));
             s.accent = u(rng) < 0.3f; s.slide = u(rng) < 0.22f;
             const float g = u(rng); s.gate = (int8_t)(g < 0.14f ? kRest : (g < 0.22f && i > 0 ? kTie : kNote));
@@ -756,6 +788,7 @@ protected:
         if (tipKey < 1000) {
             const Ctl& c = controls()[tipKey]; const uint32_t p = c.param; char b[40]; fmt(p, b, sizeof b);
             title = paramDef(p).name; value = b; body = paramTip(p);
+            if (c.type == Spin) body += "\n\nClick to step forward (the left arrow steps back), or use the mouse wheel.";
             if (c.type == Knob) body += "\n\nDrag up/down or grab the rim and turn. Double-click to type a value, Cmd/Ctrl-click to reset.";
             if (paramCC[p] >= 0) { char cc[32]; snprintf(cc, sizeof cc, "   ·   CC%d", paramCC[p]); value += cc; }
             return true;
@@ -855,6 +888,8 @@ protected:
         for (int i = 0; i < (int)cs.size(); ++i) {
             const Ctl& c = cs[i];
             if (c.type == Knob) { const float rr = c.r + 6; if ((x - c.x) * (x - c.x) + (y - c.y) * (y - c.y) <= rr * rr) return i; }
+            else if (c.type == Spin) { const float x0 = c.x - c.r / 2;
+                if (x >= x0 && x < x0 + c.r && std::fabs(y - c.y) <= TOOL_H / 2 + 1) { if (seg) *seg = x < x0 + 16 ? -1 : 1; return i; } }
             else { int n = 0; segLabels(c.param, n); const float x0 = c.x - c.r / 2;
                 if (x >= x0 && x < x0 + c.r && std::fabs(y - c.y) <= SEG_H / 2 + 1) { if (seg) *seg = (int)((x - x0) / (c.r / n)); return i; } }
         }
@@ -972,6 +1007,7 @@ protected:
             const Ctl& c = controls()[i]; const uint32_t p = c.param;
             if (learnMode) { learnWaiting = (int)p; char b[24]; snprintf(b, sizeof b, "learn:%u", p); setState("cmd", b); repaint(); return true; }
             if (c.type == Segment) { beginGesture(); commit(p, (float)seg); endGesture(); return true; }
+            if (c.type == Spin) { spinBy(p, seg); return true; }
             if (ev.mod & (kModifierControl | kModifierSuper)) { beginGesture(); commit(p, defv[p]); endGesture(); return true; }
             if (i == lastClick && ev.time - lastClickTime < 350) {
                 lastClick = -1; editing = i;
@@ -1031,6 +1067,7 @@ protected:
         if (menuOpen || saving || helpOpen) return true;
         if (presetBarHit(sx, sy) >= 0) { step(ev.delta.getY() > 0 ? -1 : 1); return true; }
         const int i = hit(sx, sy);
+        if (i >= 0 && controls()[i].type == Spin) { spinBy(controls()[i].param, ev.delta.getY() > 0 ? 1 : -1); return true; }
         if (i >= 0 && controls()[i].type == Knob) {
             const uint32_t p = controls()[i].param; const float d = (ev.delta.getY() > 0 ? 1.f : -1.f) * ((ev.mod & kModifierShift) ? 0.004f : 0.02f);
             beginGesture(); commit(p, fromNorm(p, toNorm(p, val[p]) + d)); endGesture(); return true;

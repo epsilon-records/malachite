@@ -32,6 +32,10 @@ inline const ParamDef& paramDef(uint32_t i) {
         set(kMidiOn,    "MIDI",            "midion",   "",    0, 1, B);
         set(kOutLearn,  "MIDI Learn",      "o_learn",  "",    0, 10000000, O);
         set(kOutLevel,  "Output Level",    "o_level",  "dB",  -120, 24, O);
+        set(kSubLevel,  "Sub Level",       "sublevel", "%",   0, 100, 0);
+        set(kSubOct,    "Sub Octave",      "suboct",   "",    0, 1, I);
+        set(kScale,     "Scale",           "scale",    "",    0, kNumScales - 1, I | N);
+        set(kRoot,      "Scale Root",      "root",     "",    0, 11, I | N);
     }
     return t[i];
 }
@@ -42,12 +46,18 @@ inline const char* const* enumLabels(uint32_t p, int& count) {
     static const char* const grp[] = { "I", "II", "III", "IV" };
     static const char* const pat[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
     static const char* const sec[] = { "A", "B", "A+B" };
+    static const char* const subo[] = { "-1 Oct", "-2 Oct" };
+    static const char* const scl[] = { "Chromatic", "Major", "Minor", "Dorian", "Phrygian", "Harm. Minor", "Minor Penta", "Major Penta", "Blues" };
+    static const char* const rt[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
     switch (p) {
     case kWave: count = 2; return wave;
     case kSeqMode: count = 3; return seq;
     case kGroup: count = 4; return grp;
     case kPattern: count = 8; return pat;
     case kSection: count = 3; return sec;
+    case kSubOct: count = 2; return subo;
+    case kScale: count = kNumScales; return scl;
+    case kRoot: count = 12; return rt;
     default: count = 0; return nullptr;
     }
 }

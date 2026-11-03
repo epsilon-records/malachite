@@ -41,7 +41,7 @@ hr { display:none; }
 <header id="title-block-header">
 <h1 class="title">Malachite Manual</h1>
 </header>
-<h1 id="malachite-1.1-user-manual">Malachite 1.1 — User Manual</h1>
+<h1 id="malachite-1.2-user-manual">Malachite 1.2 — User Manual</h1>
 <p>Malachite is a monophonic acid bass synthesizer with a built-in step
 sequencer. One oscillator goes through a squelchy resonant filter.
 Accents and slides give a line its bite and glide, and 64 patterns play
@@ -131,7 +131,7 @@ level.</li>
 <li>WAVEFORM (SAW or SQUARE)</li>
 <li>GATE and ACCENT lights</li>
 <li>the knobs: TUNING, CUTOFF, RESONANCE, ENV MOD, DECAY, ACCENT,
-VOLUME</li>
+VOLUME, and SUB with its SUB OCTAVE switch</li>
 <li>a scope of the output</li>
 </ul></li>
 <li><strong>Sequencer panel</strong> (bottom):
@@ -139,7 +139,7 @@ VOLUME</li>
 <li>top row: SEQUENCER mode (OFF, HOST, FREE), FREE TEMPO, GROUP (I-IV),
 PATTERN (1-8) and PLAY (A, B, A+B)</li>
 <li>tool row: which half you are EDITing, LENGTH, CLEAR, RANDOM, SHIFT,
-TRANSPOSE, COPY and PASTE</li>
+TRANSPOSE, COPY and PASTE, and SCALE with its root</li>
 <li>the step grid: a note grid (C to C) above lanes for OCT, ACCENT,
 SLIDE and GATE, sixteen steps across; the playing step is
 highlighted</li>
@@ -147,8 +147,8 @@ highlighted</li>
 </ul>
 <hr />
 <h2 id="the-sound">3. The sound</h2>
-<p>Malachite has one voice: an oscillator, a filter and an
-amplifier.</p>
+<p>Malachite has one voice: an oscillator (with an optional sub
+oscillator), a filter and an amplifier.</p>
 <ul>
 <li><strong>WAVEFORM:</strong> SAW is bright and buzzy; SQUARE is
 hollower and woodier.</li>
@@ -168,6 +168,13 @@ decay.</li>
 <li><strong>ACCENT</strong> sets how much accented steps stand out
 (section 4).</li>
 <li><strong>VOLUME</strong> sets the level.</li>
+<li><strong>SUB</strong> mixes in a square wave below the oscillator,
+for extra weight under the line. <strong>SUB OCTAVE</strong> puts it one
+octave (-1) or two octaves (-2) down. The sub goes through the filter
+with the main oscillator, so it squelches along with it, and Malachite
+turns the mix down a little as you raise it so the filter isn’t driven
+harder. At 0% (the default) you get the classic single-oscillator
+sound.</li>
 </ul>
 <p>The amplifier has a fixed shape: a quick attack, then a long fade
 while the note is held, and a quick release when the step ends.</p>
@@ -215,6 +222,27 @@ so on.</li>
 automated, so your DAW can switch patterns as the song goes.</li>
 <li>Group I comes with ten original example lines. Every other slot
 starts as sixteen plain C notes.</li>
+</ul>
+<h3 id="scales">Scales</h3>
+<p><strong>SCALE</strong> and its root (in the tool row) keep the
+sequencer in key. Choose Chromatic, Major, Minor, Dorian, Phrygian,
+Harmonic Minor, Minor Pentatonic, Major Pentatonic or Blues, on any root
+from C to B.</p>
+<ul>
+<li>A note outside the scale plays the nearest scale note
+<strong>below</strong> it. This happens as the pattern plays, after any
+MIDI transpose, so a transposed line stays in key.</li>
+<li>Your patterns are never rewritten: set SCALE back to
+<strong>CHROMATIC</strong> and every line plays exactly as you wrote
+it.</li>
+<li>In the grid, rows outside the scale are dimmed, the root’s row is
+marked, and notes on out-of-scale rows are drawn as outlines.</li>
+<li><strong>RANDOM</strong> writes lines from the chosen scale, with the
+root coming up most often.</li>
+<li>SCALE only applies to the sequencer. Notes played from MIDI with the
+sequencer OFF play as they are.</li>
+<li>SCALE and root are sequencer settings: sound presets leave them
+alone, and they can be automated.</li>
 </ul>
 <hr />
 <h2 id="programming-patterns">6. Programming patterns</h2>
@@ -268,8 +296,8 @@ beat</td>
 </tr>
 <tr class="even">
 <td>RANDOM</td>
-<td>Writes a random acid line: notes from a minor scale, octave jumps,
-accents, slides, ties and rests</td>
+<td>Writes a random acid line: notes from the SCALE (C minor when it is
+CHROMATIC), octave jumps, accents, slides, ties and rests</td>
 </tr>
 <tr class="odd">
 <td>SHIFT &lt; / &gt;</td>
@@ -412,21 +440,26 @@ same note UP, with SLIDE on the low step.</li>
 kick: the line shifts against the beat every bar.</li>
 <li><strong>Sub bass:</strong> SQUARE, CUTOFF low, RESONANCE low, ENV
 MOD low, TUNING -12, ties for long notes.</li>
+<li><strong>Weight without mud:</strong> SUB around 40-60% at -1 under a
+squelchy line; keep CUTOFF low so the sub stays round.</li>
+<li><strong>Happy accidents in key:</strong> set SCALE to Phrygian or
+Minor Pentatonic and press RANDOM until a line sticks.</li>
 <li><strong>Song arrangement:</strong> automate PATTERN (and GROUP or
 PLAY) in your DAW to switch lines in time.</li>
 </ul>
 <hr />
 <h2 id="parameter-reference">14. Parameter reference</h2>
-<p>There are 14 parameters, all automatable. New parameters are only
+<p>There are 18 parameters, all automatable. New parameters are only
 ever added at the end, so sessions and automation keep working across
 versions.</p>
 <ul>
 <li><strong>Sound:</strong> Waveform (Saw, Square), Tuning (±12
-semitones), Cutoff, Resonance, Env Mod, Decay, Accent, Volume (all
-0-100%).</li>
+semitones), Cutoff, Resonance, Env Mod, Decay, Accent, Volume, Sub Level
+(all 0-100%), Sub Octave (-1, -2).</li>
 <li><strong>Sequencer:</strong> Sequencer (Off, Host, Free), Pattern
 Group (I-IV), Pattern (1-8), Section (A, B, A+B), Free Tempo (40-300
-BPM).</li>
+BPM), Scale (Chromatic, Major, Minor, Dorian, Phrygian, Harmonic Minor,
+Minor Pentatonic, Major Pentatonic, Blues), Scale Root (C-B).</li>
 <li><strong>MIDI:</strong> MIDI on/off.</li>
 </ul>
 <p>The patterns themselves are saved as part of the plugin’s state.

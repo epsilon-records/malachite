@@ -1,4 +1,4 @@
-# Malachite 1.1 — User Manual
+# Malachite 1.2 — User Manual
 
 Malachite is a monophonic acid bass synthesizer with a built-in step sequencer. One oscillator goes through a squelchy resonant filter. Accents and slides give a line its bite and glide, and 64 patterns play in time with your DAW. Typical uses:
 
@@ -56,18 +56,18 @@ Rescan plugins in your DAW. Malachite appears under **Epsilon Audio** as an inst
 - **Synth panel** (top):
   - WAVEFORM (SAW or SQUARE)
   - GATE and ACCENT lights
-  - the knobs: TUNING, CUTOFF, RESONANCE, ENV MOD, DECAY, ACCENT, VOLUME
+  - the knobs: TUNING, CUTOFF, RESONANCE, ENV MOD, DECAY, ACCENT, VOLUME, and SUB with its SUB OCTAVE switch
   - a scope of the output
 - **Sequencer panel** (bottom):
   - top row: SEQUENCER mode (OFF, HOST, FREE), FREE TEMPO, GROUP (I-IV), PATTERN (1-8) and PLAY (A, B, A+B)
-  - tool row: which half you are EDITing, LENGTH, CLEAR, RANDOM, SHIFT, TRANSPOSE, COPY and PASTE
+  - tool row: which half you are EDITing, LENGTH, CLEAR, RANDOM, SHIFT, TRANSPOSE, COPY and PASTE, and SCALE with its root
   - the step grid: a note grid (C to C) above lanes for OCT, ACCENT, SLIDE and GATE, sixteen steps across; the playing step is highlighted
 
 ---
 
 ## 3. The sound
 
-Malachite has one voice: an oscillator, a filter and an amplifier.
+Malachite has one voice: an oscillator (with an optional sub oscillator), a filter and an amplifier.
 
 - **WAVEFORM:** SAW is bright and buzzy; SQUARE is hollower and woodier.
 - **TUNING** moves the pitch up or down by up to 12 semitones, in fine steps.
@@ -77,6 +77,7 @@ Malachite has one voice: an oscillator, a filter and an amplifier.
 - **DECAY** sets how long the filter envelope takes to close again: 0.2 to 2.5 seconds. Accented notes always use a short decay.
 - **ACCENT** sets how much accented steps stand out (section 4).
 - **VOLUME** sets the level.
+- **SUB** mixes in a square wave below the oscillator, for extra weight under the line. **SUB OCTAVE** puts it one octave (-1) or two octaves (-2) down. The sub goes through the filter with the main oscillator, so it squelches along with it, and Malachite turns the mix down a little as you raise it so the filter isn't driven harder. At 0% (the default) you get the classic single-oscillator sound.
 
 The amplifier has a fixed shape: a quick attack, then a long fade while the note is held, and a quick release when the step ends.
 
@@ -103,6 +104,17 @@ The amplifier has a fixed shape: a quick attack, then a long fade while the note
 - Patterns are saved with your project. GROUP, PATTERN and PLAY can be automated, so your DAW can switch patterns as the song goes.
 - Group I comes with ten original example lines. Every other slot starts as sixteen plain C notes.
 
+### Scales
+
+**SCALE** and its root (in the tool row) keep the sequencer in key. Choose Chromatic, Major, Minor, Dorian, Phrygian, Harmonic Minor, Minor Pentatonic, Major Pentatonic or Blues, on any root from C to B.
+
+- A note outside the scale plays the nearest scale note **below** it. This happens as the pattern plays, after any MIDI transpose, so a transposed line stays in key.
+- Your patterns are never rewritten: set SCALE back to **CHROMATIC** and every line plays exactly as you wrote it.
+- In the grid, rows outside the scale are dimmed, the root's row is marked, and notes on out-of-scale rows are drawn as outlines.
+- **RANDOM** writes lines from the chosen scale, with the root coming up most often.
+- SCALE only applies to the sequencer. Notes played from MIDI with the sequencer OFF play as they are.
+- SCALE and root are sequencer settings: sound presets leave them alone, and they can be automated.
+
 ---
 
 ## 6. Programming patterns
@@ -125,7 +137,7 @@ The grid shows the pattern being edited: the one selected by GROUP and PATTERN, 
 | EDIT A / B | Which half you edit (when PLAY is A+B) |
 | LENGTH - / + | Pattern length, 1 to 16 steps. Odd lengths drift against a 4/4 beat |
 | CLEAR | Resets the pattern to sixteen plain C notes |
-| RANDOM | Writes a random acid line: notes from a minor scale, octave jumps, accents, slides, ties and rests |
+| RANDOM | Writes a random acid line: notes from the SCALE (C minor when it is CHROMATIC), octave jumps, accents, slides, ties and rests |
 | SHIFT < / > | Rotates the pattern one step earlier or later |
 | TRANSPOSE - / + | Moves every note up or down a semitone |
 | COPY / PASTE | Copies a pattern and pastes it into another slot |
@@ -210,16 +222,18 @@ Presets change the **sound only**: the sequencer settings and your patterns stay
 - **The octave bounce:** alternate a root note and the same note UP, with SLIDE on the low step.
 - **12 against 4:** set LENGTH to 12 over a straight kick: the line shifts against the beat every bar.
 - **Sub bass:** SQUARE, CUTOFF low, RESONANCE low, ENV MOD low, TUNING -12, ties for long notes.
+- **Weight without mud:** SUB around 40-60% at -1 under a squelchy line; keep CUTOFF low so the sub stays round.
+- **Happy accidents in key:** set SCALE to Phrygian or Minor Pentatonic and press RANDOM until a line sticks.
 - **Song arrangement:** automate PATTERN (and GROUP or PLAY) in your DAW to switch lines in time.
 
 ---
 
 ## 14. Parameter reference
 
-There are 14 parameters, all automatable. New parameters are only ever added at the end, so sessions and automation keep working across versions.
+There are 18 parameters, all automatable. New parameters are only ever added at the end, so sessions and automation keep working across versions.
 
-- **Sound:** Waveform (Saw, Square), Tuning (±12 semitones), Cutoff, Resonance, Env Mod, Decay, Accent, Volume (all 0-100%).
-- **Sequencer:** Sequencer (Off, Host, Free), Pattern Group (I-IV), Pattern (1-8), Section (A, B, A+B), Free Tempo (40-300 BPM).
+- **Sound:** Waveform (Saw, Square), Tuning (±12 semitones), Cutoff, Resonance, Env Mod, Decay, Accent, Volume, Sub Level (all 0-100%), Sub Octave (-1, -2).
+- **Sequencer:** Sequencer (Off, Host, Free), Pattern Group (I-IV), Pattern (1-8), Section (A, B, A+B), Free Tempo (40-300 BPM), Scale (Chromatic, Major, Minor, Dorian, Phrygian, Harmonic Minor, Minor Pentatonic, Major Pentatonic, Blues), Scale Root (C-B).
 - **MIDI:** MIDI on/off.
 
 The patterns themselves are saved as part of the plugin's state. Malachite also reports its output level to hosts that show plugin outputs.

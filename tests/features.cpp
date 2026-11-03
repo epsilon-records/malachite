@@ -161,6 +161,38 @@ int main() {
           for (float v : l) { if (!std::isfinite(v)) ok = false; worst = std::max(worst, std::fabs(v)); } }
       check(ok && worst < 2.f, "all %u presets finite (peak %.2f)", kNumPresets, worst); }
 
+    // 14. sub oscillator: off adds nothing below the note; -1 oct adds f/2, -2 oct adds f/4; it follows a slide
+    { auto sub = [&](float lvl, float oct, std::vector<Ev> ev) { Engine* e = make({ { kCutoff, 100 }, { kResonance, 0 }, { kEnvMod, 0 }, { kSubLevel, lvl }, { kSubOct, oct } });
+          std::vector<float> a = render(*e, N, ev); delete e; return a; };
+      const std::vector<float> off = sub(0, 0, { { 0, 57, 80 } }), one = sub(100, 0, { { 0, 57, 80 } }), two = sub(100, 1, { { 0, 57, 80 } });
+      const double o110 = harm(off, 4800, 24000, 110), s110 = harm(one, 4800, 24000, 110), t55 = harm(two, 4800, 24000, 55), t110 = harm(two, 4800, 24000, 110), f220 = harm(one, 4800, 24000, 220);
+      check(o110 < 1e-3 && s110 > 0.15 && t55 > 0.15 && t110 < 0.03 && f220 > 0.05,
+            "sub: A3 alone has %.4f at 110 Hz; -1 oct adds %.2f at 110 Hz (220 Hz still %.2f); -2 oct adds %.2f at 55 Hz (110 Hz %.3f)", o110, s110, f220, t55, t110);
+      const std::vector<float> sl = sub(100, 0, { { 0, 45, 80 }, { 24000, 57, 80 }, { 24100, 45, 0 } });
+      const double before = harm(sl, 12000, 24000, 55), after = harm(sl, 24000 + 14400, 48000, 110);
+      check(before > 0.15 && after > 0.15, "sub follows a slide: 55 Hz under A2 (%.2f), 110 Hz under A3 (%.2f)", before, after);
+      const float pOff = peakAbs(off, 4800, 24000), pOn = peakAbs(one, 4800, 24000);
+      check(pOn < pOff * 1.6f, "sub at 100%% keeps the level in check: peak %.2f -> %.2f", pOff, pOn); }
+
+    // 15. scales: every note lands in the scale, at or just below where it was; chromatic changes nothing
+    { bool ok = true;
+      for (int sc = 0; sc < kNumScales; ++sc) for (int rt = 0; rt < 12; ++rt) for (int n = 0; n < 128; ++n) {
+          const int q = quantizeNote(n, rt, sc);
+          if (!inScale(q, rt, sc) || q > n || n - q > 2 || (inScale(n, rt, sc) && q != n) || (sc == kChromatic && q != n)) ok = false; }
+      check(ok, "scales: %d scales x 12 roots x 128 notes snap down into the scale (at most 2 semitones), in-scale notes untouched", (int)kNumScales); }
+
+    // 16. scales at playback: E2 in C minor plays D#2, in E Phrygian stays E2, with a MIDI transpose kept in key; patterns are not rewritten
+    { auto play = [&](float scale, float root, int key) {
+          Engine* t = make({ { kSeqMode, kSeqFree }, { kTempo, 120 }, { kCutoff, 100 }, { kResonance, 0 }, { kEnvMod, 0 }, { kScale, scale }, { kRoot, root } });
+          Pattern c; c.len = 1; c.s[0].note = 4; setPattern(*t, patternIndex(0, 0, 0), c);
+          const std::string before = serializePatterns(t->pats);
+          const std::vector<float> x = render(*t, 24000, key ? std::vector<Ev>{ { 0, key, 100 } } : std::vector<Ev>{});
+          const bool same = serializePatterns(t->pats) == before; delete t;
+          return same ? freqAt(x, 6000 + 300, 9000) : -1.f; };
+      const float chrom = play(kChromatic, 0, 0), cmin = play(kMinor, 0, 0), ephr = play(kPhrygian, 4, 0), tr = play(kMinor, 0, 62);   // +2: F#2 -> F2
+      check(std::fabs(chrom - 82.4f) < 2 && std::fabs(cmin - 77.8f) < 2 && std::fabs(ephr - 82.4f) < 2 && std::fabs(tr - 87.3f) < 2,
+            "scales at playback: E2 %.1f Hz; in C minor %.1f Hz (D#2); in E Phrygian %.1f Hz; C minor, transposed +2: %.1f Hz (F2); patterns unchanged", chrom, cmin, ephr, tr); }
+
     printf("\n%s (%d failure%s)\n", fails ? "FAILED" : "ALL PASSED", fails, fails == 1 ? "" : "s");
     return fails;
 }
