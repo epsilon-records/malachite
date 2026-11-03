@@ -52,7 +52,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Malachite*
 ## Features
 
 **The sound**
-- One band-limited oscillator: **saw** or **square**, with tuning of ±12 semitones. The oscillator and filter run at twice the sample rate, with anti-aliased saturation, so high notes stay clean.
+- One band-limited oscillator: **saw** or **square**, with tuning of ±12 semitones, plus an optional **sub oscillator** (square, one or two octaves down) mixed in before the filter. The oscillator and filter run at twice the sample rate, with anti-aliased saturation, so high notes stay clean.
 - A resonant **4-pole low-pass filter** that squelches hard but never self-oscillates, with Cutoff, Resonance, Env Mod and Decay (0.2-2.5 s).
 - A fixed amp envelope: quick attack, long fade while the note is held.
 - **Accent:** louder, with a stronger, snappier filter sweep. Back-to-back accents charge up and ramp the filter, more so with high resonance.
@@ -63,6 +63,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Malachite*
 - Up to **16 steps** per pattern, each with a note (C to C), octave up or down, accent, slide, and note, tie or rest.
 - Follows the **host tempo and transport**, or runs free at its own tempo.
 - **MIDI transposes** the running pattern.
+- **Scales:** keep the sequencer in key (Major, Minor, Dorian, Phrygian, Harmonic Minor, two pentatonics, Blues, on any root). Out-of-scale notes play the scale note below; patterns are never rewritten, and RANDOM writes in the scale.
 - A step grid for programming, plus length, clear, random, shift, transpose, and copy/paste between slots.
 - Group, pattern and section can be automated; patterns are saved with the project.
 - Ten original example lines in group I.
@@ -97,6 +98,8 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Malachite*
 | Sync and CV/gate jacks | Host tempo and transport; MIDI notes play the synth or transpose the sequencer |
 | Panel design | Original design |
 
+**Beyond the TB-303:** the sub oscillator and scales are Malachite additions. Both are off by default (SUB 0%, SCALE Chromatic), and with them off Malachite renders sample-for-sample the same as 1.1.
+
 ## Build from source
 
 The plugin is built on [DPF](https://github.com/DISTRHO/DPF):
@@ -113,7 +116,7 @@ GitHub Actions builds all three platforms on every push. The macOS build is univ
 
 ```
 cd tests
-g++ -O2 -std=c++11 features.cpp -o features && ./features   # waveforms, pitch and tuning, cutoff, resonance (no self-oscillation), decay,
+g++ -O2 -std=c++11 features.cpp -o features && ./features   # waveforms, pitch and tuning, cutoff, resonance (no self-oscillation), decay, sub oscillator, scales,
                                                             # accent and accent build-up, slide, sequencer timing with notes, rests and ties,
                                                             # host sync and stop, length, A+B chaining, MIDI transpose, pattern storage, presets
 g++ -O2 -std=c++11 fuzz.cpp -o fuzz && ./fuzz               # random settings, patterns, MIDI and transport jumps at 44.1-192 kHz: always finite
@@ -142,6 +145,7 @@ Release checks:
 
 ## Changelog
 
+- **1.2:** A sub oscillator (-1 or -2 octaves) and sequencer scales with a root. Sessions and presets from 1.1 sound identical.
 - **1.1:** The preset browser searches names and categories as you type, and keeps Favourites.
 
 ## License

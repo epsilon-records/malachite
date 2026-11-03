@@ -22,6 +22,10 @@ inline const char* paramTip(uint32_t p) {
     case kSection: return "Plays the A half, the B half, or A then B for a pattern of up to 32 steps.";
     case kTempo: return "Tempo for the FREE sequencer mode. HOST mode follows your DAW's tempo instead.";
     case kMidiOn: return "Turns MIDI input on or off: notes, transposing and learned controllers.";
+    case kSubLevel: return "Mixes in a square wave one or two octaves below the oscillator, before the filter, so it squelches with everything else. Adds weight under a line without changing its notes. 0% is the classic single-oscillator sound.";
+    case kSubOct: return "Whether the sub oscillator sits one octave (-1) or two octaves (-2) below the main oscillator.";
+    case kScale: return "Keeps the sequencer in key: notes outside the scale play the nearest scale note below. Your patterns are not changed, so CHROMATIC plays them exactly as written again. Out-of-scale notes show as outlines in the grid, and RANDOM writes lines in the scale. MIDI-played notes are not affected.";
+    case kRoot: return "The key the SCALE starts on. The root's row is marked in the grid.";
     default: return "";
     }
 }
@@ -54,7 +58,7 @@ inline const char* targetTip(int t) {
     case kTipGateRow: return "Click to cycle NOTE (play the step), TIE (keep the previous note sounding through this step) and REST (silence).";
     case kTipLength: return "Pattern length, 1 to 16 steps. Odd lengths (12, 7, 5...) drift against a 4/4 beat.";
     case kTipClear: return "Resets the pattern to sixteen plain C notes. Undo brings it back.";
-    case kTipRandom: return "Writes a random acid line: notes from a minor scale, with octave jumps, accents, slides, ties and rests. Press again for another.";
+    case kTipRandom: return "Writes a random acid line: notes from the SCALE (C minor when it is CHROMATIC), with octave jumps, accents, slides, ties and rests. Press again for another.";
     case kTipShift: return "Rotates the pattern one step earlier or later.";
     case kTipTranspose: return "Moves every note of the pattern up or down a semitone.";
     case kTipPatCopy: return "Copies this pattern, to paste it into another slot.";
@@ -79,7 +83,8 @@ static const HelpPage kHelpPages[] = {
       "One oscillator (SAW or SQUARE) goes through a resonant low-pass filter and an amplifier.\n\n"
       "CUTOFF sets where the filter starts; every note, the filter envelope opens it by ENV MOD and closes it again over DECAY. "
       "RESONANCE adds the squelch. The amplifier has a fixed shape: a quick attack and a long fade while the note is held.\n\n"
-      "TUNING moves the pitch by up to an octave either way. VOLUME sets the level." },
+      "TUNING moves the pitch by up to an octave either way. VOLUME sets the level.\n\n"
+      "SUB mixes in a square wave one or two octaves down (SUB OCTAVE) before the filter, for extra weight." },
     { "Accent & slide",
       "ACCENT on a step makes it louder and gives it a stronger, shorter filter sweep; the ACCENT knob sets how much. "
       "Several accents in a row charge up and make the filter rise further each time, especially with high resonance.\n\n"
@@ -93,7 +98,8 @@ static const HelpPage kHelpPages[] = {
     { "Programming",
       "Each column is a step. In the note grid, click a cell to set the step's note; drag to change it; right-click for a rest.\n\n"
       "Below: OCT moves a step up or down an octave, ACC accents it, SLIDE glides into the next step, and the last row cycles NOTE, TIE (hold the previous note) and REST.\n\n"
-      "Tools: LENGTH, CLEAR, RANDOM, shift left/right, transpose, COPY and PASTE between pattern slots. Every edit can be undone." },
+      "Tools: LENGTH, CLEAR, RANDOM, shift left/right, transpose, COPY and PASTE between pattern slots. Every edit can be undone.\n\n"
+      "SCALE and its root keep the sequencer in key: out-of-scale notes (outlined) play the scale note below. Your patterns are never rewritten." },
     { "MIDI & shortcuts",
       "MIDI LEARN: click LEARN, click a knob, move a controller. Right-click unassigns.\n\n"
       "A/B holds two complete settings, patterns included; COPY copies the current one to the other slot. Every edit is an undo step (Cmd/Ctrl-Z, Cmd/Ctrl-Shift-Z).\n\n"

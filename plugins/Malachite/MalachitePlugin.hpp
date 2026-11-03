@@ -27,13 +27,13 @@ public:
 protected:
     const char* getLabel() const override { return "Malachite"; }
     const char* getDescription() const override {
-        return "Acid bass synthesizer: saw or square oscillator, resonant 4-pole filter with envelope, accent and slide, "
-               "and a 16-step pattern sequencer with 64 patterns that follows the host tempo.";
+        return "Acid bass synthesizer: saw or square oscillator with a sub oscillator, resonant 4-pole filter with envelope, accent and slide, "
+               "and a 16-step pattern sequencer with 64 patterns and scales that follows the host tempo.";
     }
     const char* getMaker() const override { return "Epsilon Audio"; }
     const char* getHomePage() const override { return "https://epsilonrecords.com"; }
     const char* getLicense() const override { return "MIT"; }
-    uint32_t getVersion() const override { return d_version(1, 1, 0); }
+    uint32_t getVersion() const override { return d_version(1, 2, 0); }
 
     void initAudioPort(bool input, uint32_t index, AudioPort& port) override {
         port.groupId = kPortGroupStereo;

@@ -1,5 +1,5 @@
 // Malachite — monophonic acid bass synthesizer with a 16-step pattern sequencer.
-// Voice: one band-limited saw or square oscillator -> resonant 4-pole low-pass (zero-delay-feedback ladder with a
+// Voice: one band-limited saw or square oscillator, plus an optional square sub oscillator one or two octaves down -> resonant 4-pole low-pass (zero-delay-feedback ladder with a
 // saturating input and a high-passed resonance path, so it squelches without self-oscillating) -> VCA.
 // A fixed amp envelope, a filter envelope with decay and depth, accent (louder, shorter and stronger filter sweep,
 // with a charge that builds up over consecutive accents) and a fixed-time slide.
@@ -29,10 +29,37 @@ enum Param : uint32_t {
     kWave, kTune, kCutoff, kResonance, kEnvMod, kDecay, kAccent, kVolume,
     kSeqMode, kGroup, kPattern, kSection, kTempo, kMidiOn,
     kOutLearn, kOutLevel,
+    kSubLevel, kSubOct, kScale, kRoot,                                     // 1.2: sub oscillator, scales
     kParamCount
 };
 enum SeqMode { kSeqOff, kSeqHost, kSeqFree };
 enum Section { kSecA, kSecB, kSecAB };
+enum SubOct { kSub1, kSub2 };
+
+// ------------------------------------------------------------------ scales
+// Scales correct notes as they play; the stored patterns stay chromatic, so CHROMATIC gives the original line back.
+// bit i set = the note i semitones above the root is in the scale
+enum Scale { kChromatic, kMajor, kMinor, kDorian, kPhrygian, kHarmMinor, kMinPenta, kMajPenta, kBlues, kNumScales };
+static const uint16_t kScaleMask[kNumScales] = {
+    0xFFF,                                    // chromatic
+    1 | 1<<2 | 1<<4 | 1<<5 | 1<<7 | 1<<9 | 1<<11,   // major
+    1 | 1<<2 | 1<<3 | 1<<5 | 1<<7 | 1<<8 | 1<<10,   // natural minor
+    1 | 1<<2 | 1<<3 | 1<<5 | 1<<7 | 1<<9 | 1<<10,   // dorian
+    1 | 1<<1 | 1<<3 | 1<<5 | 1<<7 | 1<<8 | 1<<10,   // phrygian
+    1 | 1<<2 | 1<<3 | 1<<5 | 1<<7 | 1<<8 | 1<<11,   // harmonic minor
+    1 | 1<<3 | 1<<5 | 1<<7 | 1<<10,                 // minor pentatonic
+    1 | 1<<2 | 1<<4 | 1<<7 | 1<<9,                  // major pentatonic
+    1 | 1<<3 | 1<<5 | 1<<6 | 1<<7 | 1<<10,          // blues
+};
+inline bool inScale(int note, int root, int scale) {
+    if (scale <= kChromatic || scale >= kNumScales) return true;
+    return (kScaleMask[scale] >> ((((note - root) % 12) + 12) % 12)) & 1;
+}
+// out-of-scale notes move down to the nearest scale note
+inline int quantizeNote(int note, int root, int scale) {
+    for (int d = 0; d < 12; ++d) if (inScale(note - d, root, scale)) return note - d;
+    return note;
+}
 
 // ------------------------------------------------------------------ patterns
 enum Gate { kRest, kNote, kTie };
@@ -117,6 +144,7 @@ public:
         std::fill(p, p + kParamCount, 0.f);
         p[kWave] = 0; p[kTune] = 0; p[kCutoff] = 30; p[kResonance] = 70; p[kEnvMod] = 55; p[kDecay] = 45; p[kAccent] = 60; p[kVolume] = 70;
         p[kSeqMode] = kSeqHost; p[kGroup] = 0; p[kPattern] = 0; p[kSection] = kSecA; p[kTempo] = 126; p[kMidiOn] = 1;
+        p[kSubLevel] = 0; p[kSubOct] = kSub1; p[kScale] = kChromatic; p[kRoot] = 0;
         defaultPatterns(pats);
         std::fill(scope, scope + kScope, 0.f);
         setSampleRate(48000.f);
@@ -125,11 +153,11 @@ public:
     static int latency() { return epsilon::Oversampler::latency(kOs) / 2; } // only the down-sampler adds delay
     void setSampleRate(float sr) { fs = std::max(8000.f, sr); reset(); }
     void reset() {
-        phase = 0; pitch = curNote = 36; ampEnv = 0; attacking = false; filtEnv = 0; accCap = 0; accentOn = false;
+        phase = 0; subPhase = 0; pitch = curNote = 36; ampEnv = 0; attacking = false; filtEnv = 0; accCap = 0; accentOn = false;
         std::memset(z, 0, sizeof z); os.reset(); uPrev = 0; hpZ = 0; dcY = 0; gate = false; held = 0; midiNote = -1;
         ppqFree = 0; lastStep = -1; gateOffAt = -1; transpose = 0; running = false; lastSlide = false;
         mLevel = 0; stepNow.store(-1); patNow.store(-1);
-        sCut = p[kCutoff] / 100.f; sRes = p[kResonance] / 100.f; sEnv = p[kEnvMod] / 100.f; sVol = volGain();
+        sCut = p[kCutoff] / 100.f; sRes = p[kResonance] / 100.f; sEnv = p[kEnvMod] / 100.f; sVol = volGain(); sSub = subLevel();
     }
 
     // --- control from the host wrapper
@@ -194,6 +222,7 @@ public:
         const float kSm = 1.f - std::exp(-1.f / (0.01f * fs));
         const bool square = p[kWave] > 0.5f;
         const float tune = clampf(p[kTune], -12.f, 12.f);
+        const float subDiv = p[kSubOct] > 0.5f ? 0.25f : 0.5f;
         const float hpK = 1.f - std::exp(-2.f * kPi * 120.f / (fs * kOs)); // resonance path high-pass (oversampled rate)
         const float dcK = 1.f - std::exp(-2.f * kPi * 25.f / fs);
         uint32_t sw = scopeWrite.load(std::memory_order_relaxed);
@@ -210,16 +239,26 @@ public:
             sRes += (clampf(p[kResonance], 0.f, 100.f) / 100.f - sRes) * kSm;
             sEnv += (clampf(p[kEnvMod], 0.f, 100.f) / 100.f - sEnv) * kSm;
             sVol += (volGain() - sVol) * kSm;
+            sSub += (subLevel() - sSub) * kSm;
             // pitch (slides glide; plain notes jump)
             pitch += (curNote - pitch) * glide;
             const float hz = 440.f * std::exp2((pitch + tune - 69.f) / 12.f);
             const float dt = std::min(0.45f, hz / fs);
             // oscillator, at kOs times the sample rate
-            float osc[kOs]; const float dto = dt / kOs;
+            float osc[kOs]; const float dto = dt / kOs, dts = dto * subDiv;
+            // the sub mix is scaled down as it rises, so it doesn't also drive the filter's saturation harder
+            const float subG = sSub * 0.85f, subNorm = 1.f / (1.f + 0.5f * sSub);
             for (int j = 0; j < kOs; ++j) {
                 phase += dto; if (phase >= 1.f) phase -= 1.f;
                 if (!square) osc[j] = 2.f * phase - 1.f - blep(phase, dto);
                 else { float ph2 = phase + 0.5f; if (ph2 >= 1.f) ph2 -= 1.f; osc[j] = ((phase < 0.5f ? 1.f : -1.f) + blep(phase, dto) - blep(ph2, dto)) * 0.85f; }
+                // sub: a band-limited square one or two octaves down; its phase restarts with every new (non-slid) note
+                subPhase += dts; if (subPhase >= 1.f) subPhase -= 1.f;
+                if (sSub > 1e-5f) {
+                    float sh = subPhase + 0.5f; if (sh >= 1.f) sh -= 1.f;
+                    const float sub = (subPhase < 0.5f ? 1.f : -1.f) + blep(subPhase, dts) - blep(sh, dts);
+                    osc[j] = (osc[j] + subG * sub) * subNorm;
+                }
             }
             // envelopes
             filtEnv *= accentOn ? fDecayAcc : fDecay;
@@ -252,6 +291,9 @@ public:
     const Pattern& patternAt(int idx) const { return pats[idx]; }
 
 private:
+    float subLevel() const { return clampf(p[kSubLevel], 0.f, 100.f) / 100.f; }
+    int scale() const { return (int)clampf(std::round(p[kScale]), 0, kNumScales - 1); }
+    int root() const { return (int)clampf(std::round(p[kRoot]), 0, 11); }
     float volGain() const { const float v = clampf(p[kVolume], 0.f, 100.f) / 100.f; return v * v * 2.0f; }
     // antiderivative of tanh(1.4x) / 1.4, i.e. ln(cosh(1.4x)) / 1.96, in a form that does not overflow
     static float satAD(float x) { const float a = std::fabs(1.4f * x); return (a + std::log1p(std::exp(-2.f * a)) - 0.69314718f) / 1.96f; }
@@ -280,7 +322,7 @@ private:
 
     void play(int note, bool accent, bool slide) {
         curNote = (float)note; midiNote = note;
-        if (!slide) { pitch = curNote; filtEnv = 1.f; accentOn = accent; gate = true; attacking = true; }
+        if (!slide) { pitch = curNote; subPhase = phase * subPhaseScale(); filtEnv = 1.f; accentOn = accent; gate = true; attacking = true; }
         else { gate = true; }
     }
     void onStep(long stepAbs) {
@@ -302,9 +344,9 @@ private:
         const bool prevSlide = lastSlide && gate;
         if (st.gate == kRest) { gate = false; gateOffAt = -1; lastSlide = false; return; }
         if (st.gate == kNote) {
-            const int note = 36 + st.note + 12 * st.oct + transpose;
+            const int note = quantizeNote(36 + st.note + 12 * st.oct + transpose, root(), scale());
             if (prevSlide) { curNote = (float)note; accentOn = st.accent ? true : accentOn; if (st.accent) filtEnv = std::max(filtEnv, 1.f); }
-            else { curNote = pitch = (float)note; filtEnv = 1.f; accentOn = st.accent; gate = true; attacking = true; }
+            else { curNote = pitch = (float)note; subPhase = phase * subPhaseScale(); filtEnv = 1.f; accentOn = st.accent; gate = true; attacking = true; }
             gate = true;
         } else if (!gate) { lastSlide = false; return; }                  // a tie after a rest stays silent
         // hold through to the next step when sliding into it or when it is a tie; otherwise release half way
@@ -315,7 +357,8 @@ private:
 
     float fs = 48000.f;
     epsilon::Oversampler os; float uPrev = 0;
-    float phase = 0, pitch = 36, curNote = 36, ampEnv = 0, filtEnv = 0, accCap = 0;
+    float subPhaseScale() const { return p[kSubOct] > 0.5f ? 0.25f : 0.5f; }   // keeps the sub's edges on the main oscillator's
+    float phase = 0, subPhase = 0, sSub = 0, pitch = 36, curNote = 36, ampEnv = 0, filtEnv = 0, accCap = 0;
     bool accentOn = false, gate = false, lastSlide = false, attacking = false;
     float z[4] = {}, hpZ = 0, dcY = 0;
     float sCut = 0.3f, sRes = 0.7f, sEnv = 0.5f, sVol = 0.5f, mLevel = 0;
