@@ -6,7 +6,7 @@ Part of **[Epsilon Audio](https://github.com/natehouk/epsilon-plugins)**, a fami
 
 ![Malachite](screenshot.png)
 
-Malachite is a clean-room design with the feature set of the Roland TB-303 (1981): one oscillator, a squelchy resonant filter, accent and slide, and a pattern sequencer. It was written from scratch, working only from public descriptions of the instrument's features and behaviour. Its interface is an original design, not a copy of the hardware's panel. No Roland code, firmware, samples, artwork or trademarks were used.
+Malachite is a clean-room design: one oscillator, a squelchy resonant filter, accent and slide, and a pattern sequencer. It was written from scratch: the DSP, interface and presets are original work, and third-party components (such as the DPF framework) are listed under [License](#license).
 
 It is part of a family of plugins:
 - [Monolith](https://github.com/natehouk/monolith) (synth)
@@ -80,25 +80,20 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Malachite*
 
 ![Help](screenshot-help.png)
 
-### Compared with the TB-303 (1981)
+### Feature set
 
-| TB-303 | Malachite |
-|---|---|
-| One oscillator, saw or square, with tuning | ✓ |
-| Resonant low-pass filter that doesn't self-oscillate; cutoff, resonance, env mod, decay | ✓ |
-| Fixed amp envelope | ✓ |
-| Accent (level and filter), building up over consecutive accents | ✓ |
-| Slide (portamento into the next note) | ✓ |
-| 16-step patterns with note, octave up/down, accent, slide, and note/tie/rest | ✓ |
-| Variable pattern length | ✓ |
-| 64 patterns: 4 groups × 8 patterns × A/B | ✓ |
-| Pattern chaining | A then B |
-| Tracks (songs of chained patterns) | Not included: automate GROUP / PATTERN / PLAY in your DAW |
-| Separate pitch-mode and time-mode entry | Replaced by a step grid (each step has its own note and gate) |
-| Sync and CV/gate jacks | Host tempo and transport; MIDI notes play the synth or transpose the sequencer |
-| Panel design | Original design |
+- One oscillator, saw or square, with tuning.
+- Resonant low-pass filter that doesn't self-oscillate, with cutoff, resonance, env mod and decay.
+- Fixed amp envelope.
+- Accent (level and filter), building up over consecutive accents.
+- Slide (portamento into the next note).
+- 16-step patterns with note, octave up/down, accent, slide, and note/tie/rest, at a variable pattern length.
+- 64 patterns: 4 groups × 8 patterns × A/B, chained as A then B.
+- A step grid in which each step has its own note and gate.
+- Host tempo and transport for sync; MIDI notes play the synth or transpose the sequencer.
+- Not included: song tracks of chained patterns. Automate GROUP / PATTERN / PLAY in your DAW instead.
 
-**Beyond the TB-303:** the sub oscillator and scales are Malachite additions. Both are off by default (SUB 0%, SCALE Chromatic), and with them off Malachite renders sample-for-sample the same as 1.1.
+**Additions in 1.2:** the sub oscillator and scales are Malachite additions. Both are off by default (SUB 0%, SCALE Chromatic), and with them off Malachite renders sample-for-sample the same as 1.1.
 
 ## Build from source
 
@@ -151,5 +146,3 @@ Release checks:
 ## License
 
 [MIT](LICENSE). Built with [DPF](https://github.com/DISTRHO/DPF) and its bundled NanoVG, which are under the ISC license. `plugins/Malachite/ResizeHandle.hpp` comes from DPF's examples and keeps its ISC notice.
-
-"Roland" and "TB-303" are trademarks of Roland Corporation. Malachite is not affiliated with or endorsed by Roland.
