@@ -6,7 +6,7 @@ Part of **[Epsilon Audio](https://github.com/natehouk/epsilon-plugins)**, a fami
 
 ![Malachite](screenshot.png)
 
-Malachite is a clean-room design: one oscillator, a squelchy resonant filter, accent and slide, and a pattern sequencer. It was written from scratch; it includes no code, presets or artwork from any other instrument, and its interface is an original design. The libraries it builds on are listed under [License](#license).
+Malachite is a clean-room design: one oscillator, a squelchy resonant filter, accent and slide, and a pattern sequencer. It was written from scratch: the DSP, interface and presets are original work, and third-party components (such as the DPF framework) are listed under [License](#license).
 
 It is part of a family of plugins:
 - [Monolith](https://github.com/natehouk/monolith) (synth)
